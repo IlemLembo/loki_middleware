@@ -21,9 +21,6 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
         'Intended Audience :: Information Technology',
-        'Intended Audience :: Cybersecurity Analysts',
-        'Intended Audience :: DevOps',
-        'Intended Audience :: DevSecOps'
     ],
     python_requires=">=3.6",
     install_requires=[
