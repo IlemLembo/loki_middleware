@@ -60,19 +60,7 @@ class LokiLoggingMiddleware(BaseHTTPMiddleware):
                 "request_method": request.method
             }
             self.logger.error(json.dumps(error_log, default=str))
-        """ # Get current trace context for correlation
-        current_span = trace.get_current_span()
-        trace_id = None
-        span_id = None
-        current_span = trace.get_current_span()
-        trace_id = None
-        span_id = None
         
-        if current_span and current_span.is_recording():
-            span_context = current_span.get_span_context()
-            if span_context.trace_id != 0:  # Valid trace
-                trace_id = format(span_context.trace_id, "032x")
-                span_id = format(span_context.span_id, "016x") """
     
         # Determine log level based on status code
         status_code = response_dict.get("status_code", 200)
@@ -357,6 +345,19 @@ class LokiLoggingMiddleware(BaseHTTPMiddleware):
                 "response_status": "failed",
                 "response_status_code": 500
             }
+
+            if os.getenv("ENABLE_TELEGRAM_NOTIFICATION", "false").lower() == "true":
+                from ..utils.notifications import notify_on_telegram
+                environment = os.getenv("LOKI_ENVIRONMENT", "unknown")
+                message = f'<b>ENVIRONNEMENT :</b> <pre language="text">{environment}</pre><b>MODULE:</b> <pre language="text">{request.method} {request.url.path}</pre><b>FONCTIONNALITE :</b> <pre language="text">{request.method} {request.url.path}</pre><b>DETAILS :</b> Internal server error : <pre language="error">{str(e)}</pre>'
+                try:
+                    notify_on_telegram(
+                        message=message,
+                        bot_token=os.getenv("TELEGRAM_BOT_TOKEN"),
+                        chat_id=os.getenv("TELEGRAM_CHAT_ID")
+                    )
+                except Exception as notify_exception:
+                    self.logger.error(f"Failed to send Telegram notification: {str(notify_exception)}")
             
             error_message = json.dumps(error_log, default=str)
             self.logger.error(error_message)
@@ -365,7 +366,7 @@ class LokiLoggingMiddleware(BaseHTTPMiddleware):
             from fastapi.responses import JSONResponse
             return JSONResponse(
                 status_code=500,
-                content={"detail": "Internal server error", "error": str(e)},
+                content={"detail": "Internal server error"},
                 headers={"X-API-Request-ID": request_id}
             )
 

@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="loki-middleware",
-    version="0.1.0",
+    version="0.1.3",
     description="Structured logging middleware for FastAPI with Loki integration",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -24,7 +24,7 @@ setup(
     ],
     python_requires=">=3.6",
     install_requires=[
-        "fastapi>=0.136.0",
+        "fastapi>=0.112.0",
         "python-logging-loki>=0.3.1",
         "geocoder>=1.38.1",
         "dict_field_redacter>=0.1.3",
