@@ -7,9 +7,9 @@ import time
 import os
 import json
 from geocoder import ip
-from ..utils.loki_logger import LokiLogger
+from ..utils.loggers import LokiLogger
 
-class LokiLoggingMiddleware(BaseHTTPMiddleware):
+class FastapiLokiMiddleware(BaseHTTPMiddleware):
     def __init__(
         self, 
         app: FastAPI, 

@@ -5,8 +5,8 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="loki-middleware",
-    version="0.1.3",
-    description="Structured logging middleware for FastAPI with Loki integration",
+    version="0.1.7",
+    description="Structured logging middleware for FastAPI and Django with Loki integration",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="LEMBO Ilem Nelson",

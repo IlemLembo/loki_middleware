@@ -16,7 +16,7 @@ Middleware that captures detailed HTTP request/response data and geolocation, se
 - ✅ **Distributed Tracing (partial)** - trace/span correlation is a placeholder; full OpenTelemetry extraction requires configuring OpenTelemetry in your app and is not yet fully implemented in the middleware
 - ✅ **Geolocation** - Automatic IP geolocation (city, country, coordinates)
 - ✅ **Request/Response Capture** - Full body logging with content-type handling
-- ✅ **Multiple Frameworks** - FastAPI (current). Django integration is planned.
+- ✅ **Multiple Frameworks** - FastAPI (current). Django integration is now ready.
 - ✅ **Performance Metrics** - Request execution time tracking
 - ✅ **Error Handling** - Graceful degradation and error alerting
 - ✅ **Customizable** - Exclude paths, configure tags, adjust formatters
@@ -28,7 +28,7 @@ Middleware that captures detailed HTTP request/response data and geolocation, se
 pip install loki-middleware
 ```
 
-### Optional: With Django support (coming soon)
+### Optional: With Django support
 ```bash
 pip install loki-middleware[django]
 ```
@@ -58,8 +58,16 @@ app.add_middleware(
 async def root():
     return {"message": "Hello World"}
 ```
+### Django Setup
 
-## ⚙️ Configuration
+```python
+# in settings.py
+MIDDLEWARE = [
+    # ... other middleware ...
+    'loki_middleware.django.middleware.DjangoLokiMiddleware',
+]
+```
+## ⚙️ Configuration for both FastAPI and Django
 
 ### Environment Variables
 
@@ -151,19 +159,39 @@ The middleware contains a placeholder for extracting OpenTelemetry trace/span co
 - **Streaming responses**: Handled by consuming and rebuilding the iterator; review memory implications for very large streams
 - **Client disconnections**: Gracefully handled without errors
 
+---
+
 ## 🛠 Advanced Usage
 
-### Custom Exclude Paths
+## 🛠 Troubleshooting
+
+### Sentry / Starlette `ImportError: jinja2` Crash (Django)
+
+If you are running a **Django** application alongside Sentry, your server might crash on startup with the following traceback:
+> `ImportError: jinja2 must be installed to use Jinja2Templates`
+
+#### 🔍 Why this happens
+Sentry tries to be helpful by scanning your environment for installed frameworks. If another package in your project brought in `starlette` as a dependency, Sentry automatically attempts to initialize its `StarletteIntegration`. Because Starlette's template engine relies on `jinja2`, it throws an unhandled exception if `jinja2` isn't installed in your environment.
+
+#### 💡 How to fix it
+You have two options to resolve this:
+
+**Option 1: Disable the Starlette integration in Sentry (Recommended)**
+Explicitly tell Sentry to ignore Starlette by adding it to the `disabled_integrations` list in your `sentry_sdk.init` configuration within `settings.py`:
 
 ```python
-config = LokiConfig(
-    exclude_paths=[
-        "/health",
-        "/metrics",
-        "/static",
-        "/admin"
-    ]
+import sentry_sdk
+from sentry_sdk.integrations.starlette import StarletteIntegration
+
+sentry_sdk.init(
+    dsn="your_sentry_dsn",
+    profile_lifecycle="trace",
+    disabled_integrations=[StarletteIntegration()], # Prevents Sentry from sniffing Starlette
 )
+```
+**Option 2: Install Jinja2**
+```bash
+pip install jinja2
 ```
 
 ### OpenTelemetry Integration
@@ -172,7 +200,7 @@ OpenTelemetry correlation is currently a placeholder in the middleware (there ar
 
 ## 📋 Planned Features
 
-- [ ] Django middleware
+- [x] Django middleware
 - [ ] FastAPI dependency injection helper
 - [ ] Response time percentile tracking
 - [ ] `LokiConfig` helper/constructor and public API for runtime configuration

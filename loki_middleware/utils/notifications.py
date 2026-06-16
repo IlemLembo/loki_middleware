@@ -19,7 +19,7 @@ def notify_on_telegram(message:str, bot_token:str, chat_id:str):
             "parse_mode": "HTML"
         }
 
-        response = post(url, data=payload, timeout=2)
+        response = post(url, data=payload, timeout=5)
         return response
     except Exception as e:
         console_logger.error(f"Erreur lors de l'envoi de la notification Telegram: {e}")

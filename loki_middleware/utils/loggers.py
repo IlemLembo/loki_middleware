@@ -5,13 +5,38 @@ from dict_field_redacter import DictFieldRedacter
 from colorama import Fore
 from .handlers import console_handler, loki_handler
 
+class ConsoleLogger:
+    def __init__(self, name="ConsoleLogger"):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(console_handler)
+
+    def info(self, message):
+        """Log un message INFO"""
+        try:
+            self.logger.info(f"{Fore.GREEN}{message}{Fore.RESET}")
+        except Exception as e:
+            print(f"{Fore.GREEN}Erreur lors de la journalisation INFO: {e}{Fore.RESET}")
+
+    def error(self, message):
+        """Log un message ERROR"""
+        try:
+            self.logger.error(f"{Fore.RED}{message}{Fore.RESET}")
+        except Exception as e:
+            print(f"{Fore.RED}Erreur lors de la journalisation ERROR: {e}{Fore.RESET}")
+
+    def warning(self, message):
+        """Log un message WARNING"""
+        try:
+            self.logger.warning(f"{Fore.YELLOW}{message}{Fore.RESET}")
+        except Exception as e:
+            print(f"{Fore.YELLOW}Erreur lors de la journalisation WARNING: {e}{Fore.RESET}")
+
+
 class LokiLogger:
     """Configure et gère les logs Loki de manière simple"""
 
-    console_logger = logging.getLogger("console_logger")
-    console_logger.setLevel(logging.INFO)
-    
-    console_logger.addHandler(console_handler)
+    console_logger = ConsoleLogger("ConsoleLogger")
 
     def check_health(self):
         """
