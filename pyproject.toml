@@ -1,0 +1,79 @@
+[project]
+name = "loki-middleware"
+version = "0.1.0"
+description = "Centralized logging middleware for FastAPI and Django with Grafana Loki support."
+readme = "README.md"
+authors = [
+    { name = "Ilem Isaiah Nelson Junior LEMBO", email = "110841264+IlemLembo@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "colorama>=0.4.6",
+    "dict-field-redacter>=0.1.3",
+    "fastapi>=0.112.0",
+    "geocoder>=1.38.1",
+    "python-logging-loki>=0.3.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.32,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "commitizen>=4.17.0",
+    "httpx>=0.28.1",
+    "mypy>=1.15.0",
+    "pytest>=9.1.1",
+    "pytest-env>=1.7.0",
+    "ruff>=0.16.1",
+    "types-colorama>=0.4.15.20260508",
+]
+
+[tool.uv.build-backend]
+module-name = "loki_middleware"
+
+# Configuration Mypy
+[tool.mypy]
+python_version = "3.13"
+mypy_path = "src"
+files = ["src"]
+
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+# Ignorer les modules tiers sans stubs de typage
+[[tool.mypy.overrides]]
+module = [
+    "geocoder.*",
+    "logging_loki.*",
+    "dict_field_redacter.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+# Variables d'environnement injectées par pytest-env
+env = [
+    "LOKI_URL=http://localhost:3100/loki/api/v1/push",
+    "LOKI_APPLICATION=test-app",
+    "LOKI_ENVIRONMENT=test-app-env",
+    "LOKI_SERVICE=test-app-env",
+]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_scheme = "semver"
+version_provider = "pep621"
+update_changelog_on_bump = true
+major_version_zero = true

@@ -1,6 +1,7 @@
 import logging
-import sys
 import os
+import sys
+
 from logging_loki import LokiHandler
 
 loki_url = os.getenv("LOKI_URL")

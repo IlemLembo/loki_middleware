@@ -1,11 +1,11 @@
-import time
 import json
 import os
+import time
 from uuid import uuid4
+
 from geocoder import ip
-from ..utils.loggers import LokiLogger
-from ..utils.loggers import ConsoleLogger
-from functools import lru_cache
+
+from ..utils.loggers import ConsoleLogger, LokiLogger
 from ..utils.notifications import notify_on_telegram
 
 
@@ -14,37 +14,39 @@ class DjangoLokiMiddleware:
     Simple Django middleware for structured logging to Loki.
     Captures request/response and sends to Loki.
     """
-    message_template = {
-        "level": "INFO",
-        "severity": "info",
-        "request_id": None,
-        "request_origin": None,
-        "request_user_agent": None,
-        "request_referer": None,
-        "request_method": None,
-        "request_path": None,
-        "request_complete_path": None,
-        "request_query_string": None,
-        "request_ip": None,
-        "request_location": None,
-        "request_host": None,
-        "request_content_type": None,
-        "request_body": None,
-        "x_frontend_real_ip": None,
-        "response_status": None,
-        "response_status_code": None,
-        "response_time": None,
-        "response_type": None,
-        "response_content_type": None,
-        "response_content_length": None,
-        "response_body": None,
-        "exception": None
-    }
         
     def __init__(self, get_response):
         self.get_response = get_response
         self.logger = LokiLogger("DjangoLokiMiddleware")
         self.console_logger = ConsoleLogger("DjangoConsoleLogger")
+
+        # Define a message template for structured logging
+        self.message_template = {
+                "level": "INFO",
+                "severity": "info",
+                "request_id": None,
+                "request_origin": None,
+                "request_user_agent": None,
+                "request_referer": None,
+                "request_method": None,
+                "request_path": None,
+                "request_complete_path": None,
+                "request_query_string": None,
+                "request_ip": None,
+                "request_location": None,
+                "request_host": None,
+                "request_content_type": None,
+                "request_body": None,
+                "x_frontend_real_ip": None,
+                "response_status": None,
+                "response_status_code": None,
+                "response_time": None,
+                "response_type": None,
+                "response_content_type": None,
+                "response_content_length": None,
+                "response_body": None,
+                "exception": None,
+            }
 
         # Paths to exclude from logging (e.g., health checks, static files)
         ## To control later with settings or environment variables
@@ -57,11 +59,11 @@ class DjangoLokiMiddleware:
             except Exception as e:
                 if os.getenv("ENABLE_TELEGRAM_NOTIFICATION", "false").lower() == "true":
                     environment = os.getenv("LOKI_ENVIRONMENT", "unknown")
-                    message = f'<b>ENVIRONNEMENT :</b> <pre language="text">{environment}</pre><b>MODULE:</b> <pre language="text">{request.method} {request.path_info}</pre><b>FONCTIONNALITE :</b> <pre language="text">{request.method} {request.path_info}</pre><b>DETAILS :</b> Internal server error : <pre language="error">{str(e)}</pre>'
+                    message = f'<b>ENVIRONNEMENT :</b> <pre language="text">{environment}</pre><b>MODULE:</b> <pre language="text">{request.method} {request.path_info}</pre><b>FONCTIONNALITE :</b> <pre language="text">{request.method} {request.path_info}</pre><b>DETAILS :</b> Internal server error : <pre language="error">{e!s}</pre>'
                     notify_on_telegram(
                         message=message,
-                        bot_token=os.getenv("TELEGRAM_BOT_TOKEN"),
-                        chat_id=os.getenv("TELEGRAM_CHAT_ID")
+                        bot_token=str(os.getenv("TELEGRAM_BOT_TOKEN")),
+                        chat_id=str(os.getenv("TELEGRAM_CHAT_ID"))
                     )
                 raise
 
@@ -80,14 +82,11 @@ class DjangoLokiMiddleware:
         if os.getenv("ENABLE_TELEGRAM_NOTIFICATION", "false").lower() == "true" and response_data.get("response_status_code", 0) >= 500:
             environment = os.getenv("LOKI_ENVIRONMENT", "unknown")
             message = f'<b>ENVIRONNEMENT :</b> <pre language="text">{environment}</pre><b>MODULE:</b> <pre language="text">{request_data.get("request_method")} {request_data.get("request_complete_path")}</pre><b>FONCTIONNALITE :</b> <pre language="text">{request_data.get("request_method")} {request_data.get("request_complete_path")}</pre><b>DETAILS :</b> Internal server error : <pre language="error">{response_data.get("exception")}</pre>'
-            try:
-                notify_on_telegram(
-                    message=message,
-                    bot_token=os.getenv("TELEGRAM_BOT_TOKEN"),
-                    chat_id=os.getenv("TELEGRAM_CHAT_ID")
-                )
-            except Exception as notify_exception:
-                print(f"Failed to send Telegram notification: {str(notify_exception)}")
+            notify_on_telegram(
+                message=message,
+                bot_token=str(os.getenv("TELEGRAM_BOT_TOKEN")),
+                chat_id=str(os.getenv("TELEGRAM_CHAT_ID"))
+            )
         self.logger.info(log_entry)
         return response
 
@@ -133,41 +132,30 @@ class DjangoLokiMiddleware:
         return response_data
 
     def _parse_request_body(self, request):
-        try:
-            if request.content_type == "application/json" and request.body:
-                return json.loads(request.body.decode())
-            elif request.content_type == "text/plain":
-                return request.body.decode()
-            elif request.content_type.startswith("application/x-www-form-urlencoded"):
-                return request.body.decode()
-            elif request.content_type.startswith("multipart/form-data"):
-                return {k: v for k, v in request.body.decode().split('&')}
-        except Exception as e:
-            # self.console_logger.error(f"Error parsing request body: {e}")
-            pass
+        if request.content_type == "application/json" and request.body:
+            return json.loads(request.body.decode())
+        elif request.content_type == "text/plain" or request.content_type.startswith("application/x-www-form-urlencoded"):
+            return request.body.decode()
+        elif request.content_type.startswith("multipart/form-data"):
+            return {k: v for k, v in request.body.decode().split('&')}
         return None
     
     def _parse_response_body(self, response):
         """Parse the response body based on content type, with error handling"""
-        try:
-            content_type = response.get('Content-Type', '')
-            # uf
-            if content_type.startswith("application/json"):
-                return json.loads(response.content.decode('utf-8'))
-            elif content_type.startswith("text/plain") or content_type.startswith("text/html"):
-                return f"<Text content of length {len(response.content)}>"
-            elif content_type.startswith("application/x-www-form-urlencoded"):
-                return response.content.decode('utf-8')
-            elif content_type.startswith("multipart/form-data"):
-                return {k: v for k, v in response.content.decode('utf-8').split('&')}
-            elif 'application/octet-stream' in content_type:
-                return f"<Binary data of length {len(response.content)}>"
-            else:
-                return str(response.content)  # Fallback to string representation
-        except Exception as e:
-            # self.console_logger.error(f"Error parsing response body: {e}")
-            pass
-        return None
+        content_type = response.get('Content-Type', '')
+        # uf
+        if content_type.startswith("application/json"):
+            return json.loads(response.content.decode('utf-8'))
+        elif content_type.startswith(("text/plain", "text/html")):
+            return f"<Text content of length {len(response.content)}>"
+        elif content_type.startswith("application/x-www-form-urlencoded"):
+            return response.content.decode('utf-8')
+        elif content_type.startswith("multipart/form-data"):
+            return {k: v for k, v in response.content.decode('utf-8').split('&')}
+        elif 'application/octet-stream' in content_type:
+            return f"<Binary data of length {len(response.content)}>"
+        else:
+            return str(response.content)  # Fallback to string representation
 
     def _should_not_log(self, path):
         # Simple check to exclude certain paths from logging
@@ -187,15 +175,17 @@ class DjangoLokiMiddleware:
             ip = request.META.get('REMOTE_ADDR')
         return ip
 
-    @lru_cache(maxsize=1000)
+    # @lru_cache(maxsize=1000)
     def _get_location(self, ip_address):
+        """Get location information for a given IP address using geocoder. if env variable LOKI_ENABLE_GEOLOCATION is set to true and API_KEY is provided, otherwise return None."""
+        if os.getenv("LOKI_ENABLE_GEOLOCATION", "false").lower() != "true":
+            return None, None
         try:
             g = ip(ip_address)
             if g.ok:
                 return f"{g.city}, {g.state}, {g.country}", [g.lat, g.lng]
-        except Exception as e:
-            # self.console_logger.error(f"Error getting location for IP {ip_address}: {e}")
-            pass
+        except ValueError as e:
+            self.console_logger.error(f"Error getting location for IP {ip_address}: {e!s}")
         return None, None
 
     def _get_severity(self, status_code):

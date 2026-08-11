@@ -1,20 +1,23 @@
+import json
+import os
+import time
+from collections.abc import Callable
+from uuid import uuid4
+
+from fastapi import FastAPI, Request, Response
+from geocoder import ip
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import ClientDisconnect
-from fastapi import FastAPI, Request, Response
-from typing import Callable
-from uuid import uuid4
-import time
-import os
-import json
-from geocoder import ip
+
 from ..utils.loggers import LokiLogger
 
-class FastapiLokiMiddleware(BaseHTTPMiddleware):
+
+class FastapiLokiMiddleware(BaseHTTPMiddleware) :
     def __init__(
         self, 
         app: FastAPI, 
         *,
-        exclude_paths: list = []
+        exclude_paths: list | None = None
     ) -> None:
         # Defining the LokiLogger instance
         self.logger = LokiLogger("loki_middleware_logger")
@@ -30,14 +33,26 @@ class FastapiLokiMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Check if the request path should be excluded from logging
         if self._should_exclude_logging(request):
-            response = await call_next(request)
-            return response
+            return await call_next(request)
 
         request_id: str = str(uuid4())
+        response: Response | None = None
+        response_dict: dict = {}
+        request_dict: dict = {}
+
         try:
             await self.set_body(request)
+            # Exécution de la requête et récupération de la réponse et des informations de journalisation
             response, response_dict = await self._log_response(call_next, request, request_id)
-            request_dict = await self._log_request(request)
+
+            # Injection immédiate du header "X-API-Request-ID" dans la réponse pour assurer sa présence même en cas d'erreur
+            if response is not None:
+                response.headers["X-API-Request-ID"] = request_id
+            
+            try:
+                request_dict = await self._log_request(request)
+            except (json.JSONDecodeError, UnicodeDecodeError) as req_err:
+                self.logger.error(f"Error logging request: {req_err!s}")
 
         except ClientDisconnect:
             error_log = {
@@ -49,8 +64,10 @@ class FastapiLokiMiddleware(BaseHTTPMiddleware):
             }
             self.logger.error(json.dumps(error_log, default=str))
             response = await call_next(request)
+            response.headers["X-API-Request-ID"] = request_id
             return response
-        except Exception as e:
+        
+        except Exception as e: #noqa: BLE001
             error_log = {
                 "level": "ERROR",
                 "event": "logging_middleware_error",
@@ -60,46 +77,52 @@ class FastapiLokiMiddleware(BaseHTTPMiddleware):
                 "request_method": request.method
             }
             self.logger.error(json.dumps(error_log, default=str))
-        
-    
-        # Determine log level based on status code
-        status_code = response_dict.get("status_code", 200)
-        log_level = self._get_log_level_from_status_code(status_code)
 
-        # Create a flattened log structure with trace correlation
-        logging_dict = {
-            "level": log_level,
-            "severity": self._get_log_severity(status_code),  # Additional field for filtering
-            "request_id": request_id,
-            'request_origin': request_dict.get("origin"),
-            'request_user_agent': request_dict.get("user_agent"),
-            'request_referer': request_dict.get("referer"),
-            'x_frontend_real_ip': request_dict.get("x_frontend_real_ip"),
-            "request_method": request_dict.get("method"),
-            "request_path": request_dict.get("path"),
-            "request_ip": request_dict.get("ip"),
-            "request_location": request_dict.get("location"),
-            "request_location_latlng": request_dict.get("location_latlng"),
-            "request_host": os.getenv("REQUEST_HOST", "localhost"),
-            "request_body": request_dict.get("body"),
-            "response_status": response_dict.get("status"),
-            "response_status_code": response_dict.get("status_code"),
-            "response_time": response_dict.get("time_taken"),
-            "response_type": response_dict.get("response_type"),  # Add this line
-            "response_content_type": response_dict.get("content_type"),  # Add this line
-            "response_content_length": response_dict.get("content_length"),  # Add this line
-            "response_body": response_dict.get("body"),
-        }
+            if response is None:
+                response = await call_next(request)
 
-        # Log with structured fields including trace context
-        log_message = json.dumps(logging_dict, default=str)
-        # Use appropriate logging method based on status code
-        if status_code >= 500:
-            self.logger.error(log_message)
-        elif status_code >= 400:
-            self.logger.warning(log_message)
-        else:
-            self.logger.info(log_message)
+            response.headers["X-API-Request-ID"] = request_id
+
+        try:
+            # Determine log level based on status code
+            status_code = response_dict.get("status_code", getattr(response, "status_code", 200))
+            log_level = self._get_log_level_from_status_code(status_code)
+
+            # Create a flattened log structure with trace correlation
+            logging_dict = {
+                "level": log_level,
+                "severity": self._get_log_severity(status_code),
+                "request_id": request_id,
+                'request_origin': request_dict.get("origin"),
+                'request_user_agent': request_dict.get("user_agent"),
+                'request_referer': request_dict.get("referer"),
+                'x_frontend_real_ip': request_dict.get("x_frontend_real_ip"),
+                "request_method": request_dict.get("method"),
+                "request_path": request_dict.get("path"),
+                "request_ip": request_dict.get("ip"),
+                "request_location": request_dict.get("location"),
+                "request_location_latlng": request_dict.get("location_latlng"),
+                "request_host": os.getenv("REQUEST_HOST", "localhost"),
+                "request_body": request_dict.get("body"),
+                "response_status": response_dict.get("status"),
+                "response_status_code": response_dict.get("status_code"),
+                "response_time": response_dict.get("time_taken"),
+                "response_type": response_dict.get("response_type"),
+                "response_content_type": response_dict.get("content_type"),
+                "response_content_length": response_dict.get("content_length"),
+                "response_body": response_dict.get("body"),
+            }
+
+            log_message = json.dumps(logging_dict, default=str)
+            # Use appropriate logging method based on status code
+            if status_code >= 500:
+                self.logger.error(log_message)
+            elif status_code >= 400:
+                self.logger.warning(log_message)
+            else:
+                self.logger.info(log_message)
+        except Exception as log_err: #noqa: BLE001
+            self.logger.error(f"Error logging request/response: {log_err!s}")
 
         return response
 
@@ -163,7 +186,7 @@ class FastapiLokiMiddleware(BaseHTTPMiddleware):
             request._receive = receive
         except ClientDisconnect:
             # In case of any error, log it and proceed without body logging
-            self.logger.error(f"Error reading request body, Probably from the client side")
+            self.logger.error("Error reading request body, Probably from the client side")
             request.state.body = b""
 
     async def _log_request(self, request: Request) -> dict:
@@ -212,7 +235,7 @@ class FastapiLokiMiddleware(BaseHTTPMiddleware):
                             try:
                                 request_logging["body"] = json.loads(body_str)
                             except json.JSONDecodeError as e:
-                                request_logging["body"] = f"<invalid JSON: {str(e)}>"
+                                request_logging["body"] = f"<invalid JSON: {e!s}>"
                         elif request.headers.get('content-type', '').startswith('application/x-www-form-urlencoded'):
                             # Parse form data
                             from urllib.parse import parse_qs
@@ -223,7 +246,7 @@ class FastapiLokiMiddleware(BaseHTTPMiddleware):
                     else:
                         request_logging["body"] = None
                 except (UnicodeDecodeError, json.JSONDecodeError) as e:
-                    request_logging["body"] = f"<error parsing body: {str(e)}>"
+                    request_logging["body"] = f"<error parsing body: {e!s}>"
             else:
                 request_logging["body"] = None
         else:
@@ -282,7 +305,7 @@ class FastapiLokiMiddleware(BaseHTTPMiddleware):
                         else:
                             response_body = body_str[:1000] + "..." if len(body_str) > 1000 else body_str
                     except (UnicodeDecodeError, json.JSONDecodeError) as e:
-                        response_body = f"<error parsing body: {str(e)}>"
+                        response_body = f"<error parsing body: {e!s}>"
         
             # Handle Response objects with direct body access
             elif hasattr(response, 'body') and response.body:
@@ -311,8 +334,8 @@ class FastapiLokiMiddleware(BaseHTTPMiddleware):
                 
             response_logging["body"] = response_body
             
-        except Exception as e:
-            response_logging["body"] = f"<error extracting response body: {str(e)}>"
+        except Exception as e: #noqa: BLE001
+            response_logging["body"] = f"<error extracting response body: {e!s}>"
 
         return response, response_logging
 
@@ -335,7 +358,7 @@ class FastapiLokiMiddleware(BaseHTTPMiddleware):
             response.headers["X-API-Request-ID"] = request_id
             return response
 
-        except Exception as e:
+        except Exception as e: #noqa: BLE001
             error_log = {
                 "request_id": request_id,
                 "error": "Internal server error",
@@ -349,15 +372,12 @@ class FastapiLokiMiddleware(BaseHTTPMiddleware):
             if os.getenv("ENABLE_TELEGRAM_NOTIFICATION", "false").lower() == "true":
                 from ..utils.notifications import notify_on_telegram
                 environment = os.getenv("LOKI_ENVIRONMENT", "unknown")
-                message = f'<b>ENVIRONNEMENT :</b> <pre language="text">{environment}</pre><b>MODULE:</b> <pre language="text">{request.method} {request.url.path}</pre><b>FONCTIONNALITE :</b> <pre language="text">{request.method} {request.url.path}</pre><b>DETAILS :</b> Internal server error : <pre language="error">{str(e)}</pre>'
-                try:
-                    notify_on_telegram(
-                        message=message,
-                        bot_token=os.getenv("TELEGRAM_BOT_TOKEN"),
-                        chat_id=os.getenv("TELEGRAM_CHAT_ID")
-                    )
-                except Exception as notify_exception:
-                    self.logger.error(f"Failed to send Telegram notification: {str(notify_exception)}")
+                message = f'<b>ENVIRONNEMENT :</b> <pre language="text">{environment}</pre><b>MODULE:</b> <pre language="text">{request.method} {request.url.path}</pre><b>FONCTIONNALITE :</b> <pre language="text">{request.method} {request.url.path}</pre><b>DETAILS :</b> Internal server error : <pre language="error">{e!s}</pre>'
+                notify_on_telegram(
+                    message=message,
+                    bot_token=str(os.getenv("TELEGRAM_BOT_TOKEN")),
+                    chat_id=str(os.getenv("TELEGRAM_CHAT_ID"))
+                )
             
             error_message = json.dumps(error_log, default=str)
             self.logger.error(error_message)

@@ -1,9 +1,12 @@
+import json
 import logging
 import os
-import json
-from dict_field_redacter import DictFieldRedacter
+
 from colorama import Fore
+from dict_field_redacter import DictFieldRedacter
+
 from .handlers import console_handler, loki_handler
+
 
 class ConsoleLogger:
     def __init__(self, name="ConsoleLogger"):
@@ -15,21 +18,21 @@ class ConsoleLogger:
         """Log un message INFO"""
         try:
             self.logger.info(f"{Fore.GREEN}{message}{Fore.RESET}")
-        except Exception as e:
+        except Exception as e: #noqa: BLE001
             print(f"{Fore.GREEN}Erreur lors de la journalisation INFO: {e}{Fore.RESET}")
 
     def error(self, message):
         """Log un message ERROR"""
         try:
             self.logger.error(f"{Fore.RED}{message}{Fore.RESET}")
-        except Exception as e:
+        except Exception as e: #noqa: BLE001
             print(f"{Fore.RED}Erreur lors de la journalisation ERROR: {e}{Fore.RESET}")
 
     def warning(self, message):
         """Log un message WARNING"""
         try:
             self.logger.warning(f"{Fore.YELLOW}{message}{Fore.RESET}")
-        except Exception as e:
+        except Exception as e: #noqa: BLE001
             print(f"{Fore.YELLOW}Erreur lors de la journalisation WARNING: {e}{Fore.RESET}")
 
 
@@ -59,7 +62,7 @@ class LokiLogger:
             else:
                 self.console_logger.warning(f"⚠️  {Fore.RED}Loki est inaccessible (status code: {response.status_code}). Les logs ne seront pas envoyés.{Fore.RESET}")
                 return False
-        except Exception as e:
+        except Exception as e: #noqa: BLE001
             self.console_logger.error(f"⚠️  {Fore.RED}Erreur lors de la connexion à Loki: {e}. Les logs ne seront pas envoyés.{Fore.RESET}")
             return False
     
@@ -91,7 +94,7 @@ class LokiLogger:
         if not isinstance(message, dict):
             try:
                 message = json.loads(message)
-            except Exception as e:
+            except json.JSONDecodeError as e:
                 self.console_logger.error(f"{Fore.RED}Erreur lors de la conversion du message en dict: {e}{Fore.RESET}")
                 return message  # Si on ne peut pas convertir, retourner le message original
         redactor = DictFieldRedacter(self.sensitive_fields, maskWith=self.mask_value)
@@ -104,7 +107,7 @@ class LokiLogger:
             if self.redact:
                 message = self.redact_sensitive_info(message)
             self.logger.info(message)
-        except Exception as e:
+        except Exception as e: #noqa: BLE001
             self.console_logger.error(f"{Fore.RED}Erreur lors de la journalisation INFO: {e}{Fore.RESET}")
 
     def error(self, message):
@@ -113,7 +116,7 @@ class LokiLogger:
             if self.redact:
                 message = self.redact_sensitive_info(message)
             self.logger.error(message)
-        except Exception as e:
+        except Exception as e: #noqa: BLE001
             self.console_logger.error(f"{Fore.RED}Erreur lors de la journalisation ERROR: {e}{Fore.RESET}")
 
     def warning(self, message):
@@ -122,5 +125,5 @@ class LokiLogger:
             if self.redact:
                 message = self.redact_sensitive_info(message)
             self.logger.warning(message)
-        except Exception as e:
+        except Exception as e: #noqa: BLE001
             self.console_logger.error(f"{Fore.RED}Erreur lors de la journalisation WARNING: {e}{Fore.RESET}")

@@ -1,0 +1,108 @@
+# .github/workflows/ci-cd.yml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" , "master" ]
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ "main" , "master" ]
+
+jobs:
+  # ==========================================
+  # JOB 1 : Tests d'intégration & Linting
+  # ==========================================
+  test:
+    name: Run Pytests & Linting
+    runs-on: ubuntu-latest
+
+    services:
+      loki:
+        image: grafana/loki:latest
+        ports:
+          - 3100:3100
+        # facultatif: options d'attente (healthcheck) pour s'assurer que Loki est prêt
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Astral uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-suffix: "uv-cache"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run Ruff (Linter)
+        run: uv run ruff check .
+
+      - name: Run Pytest (FastAPI Integration Tests)
+        run: uv run pytest --maxfail=1 --disable-warnings
+
+  release:
+    name: Auto Bump & Tag
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v3
+
+      - name: Create Bump and Push Tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          uv run commitizen bump --yes
+          git push origin main --tags
+
+#   ==========================================
+#   JOB 2 : Déploiement sur PyPI (si tag v*)
+#   ==========================================
+#  deploy:
+#    name: Build & Publish to PyPI
+#    needs: test  # Ne s'exécute QUE si le job "test" réussit
+#    if: startsWith(github.ref, 'refs/tags/v')
+#    runs-on: ubuntu-latest
+#
+#    permissions:
+#      id-token: write
+#      contents: read
+#     Optionnel: associe ce job à l'environnement configuré sur PyPI
+
+#    environment:
+#      name: pypi
+#      url: https://pypi.org/p/loki-middleware
+
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v5
+#
+#      - name: Set up Astral uv
+#        uses: astral-sh/setup-uv@v3
+#
+#      - name: Build package
+#        run: uv build
+#
+#      - name: Publish package to PyPI
+#        uses: pypa/gh-action-pypi-publish@release/v1

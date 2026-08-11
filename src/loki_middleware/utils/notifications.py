@@ -1,6 +1,8 @@
     
-from requests import post
 import logging
+
+from requests import post
+
 from .handlers import console_handler
 
 
