@@ -10,7 +10,7 @@ on:
 
 jobs:
   # ==========================================
-  # JOB 1 : Tests d'intégration & Linting
+  # JOB 1 : Linting
   # ==========================================
   test:
     name: Run Pytests & Linting
@@ -69,7 +69,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          uvx --from commitizen cz bump --yes --NO-RAISE-ON-NO-COMMITS
+          uvx --from commitizen cz bump --yes --no-raise-on-no-commits
           git push origin main --tags
 
 #   ==========================================
