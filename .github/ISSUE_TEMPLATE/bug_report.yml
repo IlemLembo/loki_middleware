@@ -1,0 +1,55 @@
+name: 🐛 Bug Report
+description: Signaler un dysfonctionnement dans Loki Middleware.
+title: "[BUG]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: Merci d'avoir pris le temps de signaler un problème ! Vérifiez d'abord que le bug n'est pas déjà répertorié.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description du bug
+      description: Une explication claire et concise du problème.
+      placeholder: Exemple - Le middleware ne propage pas le header X-Request-ID aux logs Grafana...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Étapes pour reproduire
+      placeholder: |
+        1. Configurer le middleware avec endpoint_url
+        2. Démarrer l'application FastAPI/Starlette
+        3. Effectuer une requête GET /health
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportement attendu
+      description: Ce qui aurait dû se passer.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs et Stack Traces
+      description: Copiez-collez ici les traces d'erreurs d'exécution.
+      render: shell
+
+  - type: dropdown
+    id: python-version
+    attributes:
+      label: Version de Python
+      options:
+        - "3.10"
+        - "3.11"
+        - "3.12"
+        - "3.13"
+    validations:
+      required: true

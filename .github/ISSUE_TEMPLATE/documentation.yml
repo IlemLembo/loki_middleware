@@ -1,0 +1,12 @@
+name: 📝 Documentation Update
+description: Signaler une erreur ou suggérer un ajout dans la documentation.
+title: "[DOC]: "
+labels: ["documentation"]
+body:
+  - type: textarea
+    id: details
+    attributes:
+      label: Que faut-il corriger ou ajouter ?
+      placeholder: Exemple - Ajouter un exemple complet d'intégration avec Grafana Loki.
+    validations:
+      required: true

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Questions & Discussions
+    url: https://github.com/IlemLembo/loki-middleware/discussions
+    about: Pour poser des questions d'utilisation ou échanger sur l'architecture.
+  - name: 📖 Documentation
+    url: https://github.com/IlemLembo/loki-middleware#readme
+    about: Consultez le README avant d'ouvrir un ticket.

@@ -1,0 +1,40 @@
+name: 🚀 Feature Request
+description: Proposer une nouvelle fonctionnalité ou amélioration d'architecture.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problème ou Cas d'Usage
+      description: Quel besoin métier ou problème d'opérateur cette fonction résout-elle ?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution proposée
+      description: Description claire de la fonctionnalité souhaitée.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Exemple de Configuration ou Code
+      description: Exemple d'utilisation dans Python ou YAML.
+      render: python
+      placeholder: |
+        # Configuration proposée
+        app.add_middleware(LokiMiddleware, custom_header="X-Trace-ID")
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Critères d'acceptation
+      placeholder: |
+        1. La clé X-Trace-ID est enregistrée dans les labels Loki
+        2. Les tests unitaires couvrent le cas nominal
+    validations:
+      required: true
