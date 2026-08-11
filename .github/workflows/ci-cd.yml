@@ -21,6 +21,8 @@ jobs:
         image: grafana/loki:latest
         ports:
           - 3100:3100
+        volumes:
+          - ${{ github.workspace }}/.github/loki-config.yaml:/etc/loki/local-config.yaml
         # facultatif: options d'attente (healthcheck) pour s'assurer que Loki est prêt
         options: >-
           --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"
