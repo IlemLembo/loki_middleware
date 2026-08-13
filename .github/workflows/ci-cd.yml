@@ -78,7 +78,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Force Commitizen à créer le tag sans bloquer si aucun tag précédent n'existe
+          # Ajout du flag --files-only ou bypass du changelog si aucun tag n'est trouvé
           uvx --from commitizen cz bump --yes --allow-no-commit
           
           # Pousse les commits de bump ET les tags créés
