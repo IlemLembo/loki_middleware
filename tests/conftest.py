@@ -2,6 +2,7 @@
 import django
 from django.conf import settings
 
+
 def pytest_configure():
     """Minimal Django configuration required for middleware testing."""
     if not settings.configured:
