@@ -2,10 +2,10 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "**" ]
-    # tags: [ 'v*.*.*' ]
+    branches: [ "main" ]
+    tags: [ "v*.*.*" ]
   pull_request:
-    branches: [ "main"]
+    branches: [ "main" ]
 
 jobs:
   # ==========================================
@@ -18,6 +18,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
       - name: Start Loki container
         run: |
           docker run -d \
@@ -47,22 +48,23 @@ jobs:
       - name: Run Format check
         run: uv run ruff format --check .
 
-      - name: Run Pytest (FastAPI Integration Tests)
+      - name: Run Pytest (FastAPI & Django Tests)
         run: uv run pytest --maxfail=1 --disable-warnings
 
   # ==========================================
-  # JOB 2 : Auto Bump, Tag & Push
+  # JOB 2 : Auto Bump & Create Tag (Uniquement sur Push 'main')
   # ==========================================
   release:
     name: Auto Bump & Tag
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && !startsWith(github.event.head_commit.message, 'bump:')
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout repository with full history & tags
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -75,16 +77,20 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Force Commitizen à créer le tag sans bloquer si aucun tag précédent n'existe
           uvx --from commitizen cz bump --yes --allow-no-commit
-          git push origin main --tags
+          
+          # Pousse les commits de bump ET les tags créés
+          git push origin main --follow-tags
 
   # ==========================================
-  # JOB 3 : Déploiement sur PyPI (si Tag)
+  # JOB 3 : Build & Publish (Uniquement lors du Push d'un TAG v*)
   # ==========================================
   deploy:
     name: Build & Publish to PyPI
-    needs: [test, release]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
     permissions:
@@ -96,13 +102,9 @@ jobs:
       url: https://pypi.org/p/loki-middleware
 
     steps:
-      - name: Checkout repository
+      - name: Checkout tag version
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
 
-      - name: Pull latest changes (incluant le bump version)
-        run: git pull origin main
       - name: Set up Astral uv
         uses: astral-sh/setup-uv@v3
 
