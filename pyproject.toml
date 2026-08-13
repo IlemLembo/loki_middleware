@@ -1,6 +1,6 @@
 [project]
 name = "loki-middleware"
-version = "0.1.9"
+version = "0.1.8"
 description = "Centralized logging middleware for FastAPI and Django with Grafana Loki support."
 readme = "README.md"
 authors = [
