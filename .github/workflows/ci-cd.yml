@@ -79,7 +79,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # Ajout du flag --files-only ou bypass du changelog si aucun tag n'est trouvé
-          uvx --from commitizen cz bump --yes --allow-no-commit --no-changelog
+          uvx --from commitizen cz bump --yes --allow-no-commit
           
           # Pousse les commits de bump ET les tags créés
           git push origin main --follow-tags

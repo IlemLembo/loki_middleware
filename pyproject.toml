@@ -76,5 +76,5 @@ name = "cz_conventional_commits"
 tag_format = "v$version"
 version_scheme = "semver"
 version_provider = "pep621"
-update_changelog_on_bump = true
+update_changelog_on_bump = false
 major_version_zero = true
