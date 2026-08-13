@@ -11,8 +11,7 @@ from loki_middleware.fastapi.middleware import FastapiLokiMiddleware
 @pytest.fixture(autouse=True)
 def mock_external_services():
     """Empêche toute tentative de connexion HTTP réelle vers Loki ou Telegram."""
-    with patch("logging_loki.LokiHandler.emit"), \
-         patch("requests.post") as mock_post:
+    with patch("logging_loki.LokiHandler.emit"), patch("requests.post") as mock_post:
         mock_post.return_value.status_code = 200
         yield
 
@@ -58,18 +57,22 @@ def test_request_id_header_generated(client: TestClient) -> None:
     response = client.get("/ping")
     print(response.headers)
     assert response.status_code == 200
-    assert "x-api-request-id" in response.headers or "X-API-Request-ID" in response.headers
+    assert (
+        "x-api-request-id" in response.headers or "X-API-Request-ID" in response.headers
+    )
+
 
 def test_loki_accessibility_on_ping(client: TestClient, caplog) -> None:
     # Capturer les logs de niveau INFO
     with caplog.at_level(logging.INFO):
         response = client.get("/ping")
-        
+
         # 1. Vérifier que la route répond correctement
         assert response.status_code == 200
-        
+
         # 2. S'assurer que le message de succès Loki est présent dans les logs capturés
         assert "Loki est accessible et prêt à recevoir les logs" in caplog.text
+
 
 def test_http_exception_handling(client: TestClient) -> None:
     response = client.get("/error")

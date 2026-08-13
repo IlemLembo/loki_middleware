@@ -13,5 +13,6 @@ __all__ = [
     "notify_on_telegram",
 ]
 
+
 def hello() -> str:
     return "Hello from loki-middleware!"

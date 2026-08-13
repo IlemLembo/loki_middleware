@@ -49,10 +49,8 @@ from loki_middleware.fastapi.middleware import LokiLoggingMiddleware
 app = FastAPI()
 
 # Add middleware (current API)
-app.add_middleware(
-    LokiLoggingMiddleware,
-    exclude_paths=["/health", "/metrics"]
-)
+app.add_middleware(LokiLoggingMiddleware, exclude_paths=["/health", "/metrics"])
+
 
 @app.get("/")
 async def root():
@@ -64,7 +62,7 @@ async def root():
 # in settings.py
 MIDDLEWARE = [
     # ... other middleware ...
-    'loki_middleware.django.middleware.DjangoLokiMiddleware',
+    "loki_middleware.django.middleware.DjangoLokiMiddleware",
 ]
 ```
 ## ⚙️ Configuration for both FastAPI and Django
@@ -186,7 +184,9 @@ from sentry_sdk.integrations.starlette import StarletteIntegration
 sentry_sdk.init(
     dsn="your_sentry_dsn",
     profile_lifecycle="trace",
-    disabled_integrations=[StarletteIntegration()], # Prevents Sentry from sniffing Starlette
+    disabled_integrations=[
+        StarletteIntegration()
+    ],  # Prevents Sentry from sniffing Starlette
 )
 ```
 **Option 2: Install Jinja2**

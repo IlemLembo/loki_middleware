@@ -8,9 +8,7 @@ loki_url = os.getenv("LOKI_URL")
 
 console_handler = logging.StreamHandler(sys.stderr)
 console_handler.setLevel(logging.INFO)
-console_formatter = logging.Formatter(
-    '%(asctime)s - %(levelname)s - %(message)s'
-)
+console_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 console_handler.setFormatter(console_formatter)
 
 
