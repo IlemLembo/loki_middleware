@@ -89,8 +89,8 @@ jobs:
   # ==========================================
   deploy:
     name: Build & Publish to PyPI
-    needs: test
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, release]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     permissions:
