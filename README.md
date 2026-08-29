@@ -47,12 +47,12 @@ pip install loki-middleware[dev]
 
 ```python
 from fastapi import FastAPI
-from loki_middleware.fastapi.middleware import LokiLoggingMiddleware
+from loki_middleware.fastapi import FastapiLokiMiddleware
 
 app = FastAPI()
 
 # Add middleware (current API)
-app.add_middleware(LokiLoggingMiddleware, exclude_paths=["/health", "/metrics"])
+app.add_middleware(FastapiLokiMiddleware, exclude_paths=["/health", "/metrics"])
 
 
 @app.get("/")
